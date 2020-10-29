@@ -19,11 +19,24 @@ package org.apache.gora.mongodb.store;
 
 import com.google.common.base.Splitter;
 import com.mongodb.*;
+import static com.mongodb.AuthenticationMechanism.*;
 import com.mongodb.client.*;
 import com.mongodb.client.model.CountOptions;
 import com.mongodb.client.model.CreateCollectionOptions;
+import static com.mongodb.client.model.Filters.and;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
+import java.io.IOException;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.StreamSupport;
+import javax.xml.XMLConstants;
+import javax.xml.bind.DatatypeConverter;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.SchemaFactory;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
@@ -54,18 +67,7 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.xml.bind.DatatypeConverter;
-import java.io.IOException;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.StreamSupport;
-
-import static com.mongodb.AuthenticationMechanism.*;
-import static com.mongodb.client.model.Filters.and;
+import org.xml.sax.SAXException;
 
 /**
  * Implementation of a MongoDB data store to be used by gora.
@@ -86,6 +88,7 @@ DataStoreBase<K, T> {
    * Default value for mapping file
    */
   public static final String DEFAULT_MAPPING_FILE = "/gora-mongodb-mapping.xml";
+  private static final String XSD_MAPPING_FILE = "gora-mongodb.xsd";
 
   /**
    * MongoDB client
@@ -128,6 +131,9 @@ DataStoreBase<K, T> {
       builder.fromFile(parameters.getMappingFile());
       mapping = builder.build();
 
+      javax.xml.validation.Schema newSchema = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+        .newSchema(new StreamSource(getClass().getClassLoader().getResourceAsStream(XSD_MAPPING_FILE)));
+      newSchema.newValidator().validate(new StreamSource(getClass().getClassLoader().getResourceAsStream(DEFAULT_MAPPING_FILE)));
       // Prepare MongoDB connection
       mongoClientDB = getDB(parameters);
       mongoClientColl = mongoClientDB
@@ -140,6 +146,10 @@ DataStoreBase<K, T> {
     } catch (IOException e) {
       LOG.error("Error while initializing MongoDB store", e);
       throw new GoraException(e);
+    } catch (SAXException  e){
+      LOG.error("Error while validating mapping file", e);
+      throw new GoraException(e);
+    
     }
   }
 

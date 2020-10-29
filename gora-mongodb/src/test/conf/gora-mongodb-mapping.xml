@@ -15,7 +15,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<gora-otd>
+<gora-otd xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="gora-mongodb.xsd">
 
     <class name="org.apache.gora.examples.generated.Employee" keyClass="java.lang.String" document="frontier">
         <field name="name" docfield="name" type="string"/>
